@@ -11,8 +11,6 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
-#include "lib/kernel/list.h"
-#include "userprog/process.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -42,7 +40,6 @@ static struct lock tid_lock;
 /* Stack frame for kernel_thread(). */
 struct kernel_thread_frame 
   {
-
     void *eip;                  /* Return address. */
     thread_func *function;      /* Function to call. */
     void *aux;                  /* Auxiliary data for function. */
@@ -52,6 +49,7 @@ struct kernel_thread_frame
 static long long idle_ticks;    /* # of timer ticks spent idle. */
 static long long kernel_ticks;  /* # of timer ticks in kernel threads. */
 static long long user_ticks;    /* # of timer ticks in user programs. */
+
 /* Scheduling. */
 #define TIME_SLICE 4            /* # of timer ticks to give each thread. */
 static unsigned thread_ticks;   /* # of timer ticks since last yield. */
@@ -60,7 +58,6 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
-
 
 static void kernel_thread (thread_func *, void *aux);
 
@@ -73,7 +70,6 @@ static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
-
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -88,7 +84,6 @@ static tid_t allocate_tid (void);
 
    It is not safe to call thread_current() until this function
    finishes. */
-//TODO : Who calls thread_init? 
 void
 thread_init (void) 
 {
@@ -97,14 +92,12 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+
   /* Set up a thread structure for the running thread. */
-
   initial_thread = running_thread ();
-
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
-
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -119,6 +112,7 @@ thread_start (void)
 
   /* Start preemptive thread scheduling. */
   intr_enable ();
+
   /* Wait for the idle thread to initialize idle_thread. */
   sema_down (&idle_started);
 }
@@ -144,7 +138,6 @@ thread_tick (void)
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
 }
-
 
 /* Prints thread statistics. */
 void
@@ -238,7 +231,7 @@ thread_block (void)
 void
 thread_unblock (struct thread *t) 
 {
-enum intr_level old_level;
+  enum intr_level old_level;
 
   ASSERT (is_thread (t));
 
@@ -247,7 +240,6 @@ enum intr_level old_level;
   list_push_back (&ready_list, &t->elem);
   t->status = THREAD_READY;
   intr_set_level (old_level);
-
 }
 
 /* Returns the name of the running thread. */
@@ -289,7 +281,6 @@ void
 thread_exit (void) 
 {
   ASSERT (!intr_context ());
-
 
 #ifdef USERPROG
   process_exit ();
@@ -384,7 +375,7 @@ thread_get_recent_cpu (void)
   /* Not yet implemented. */
   return 0;
 }
-
+
 /* Idle thread.  Executes when no other thread is ready to run.
 
    The idle thread is initially put on the ready list by
@@ -408,7 +399,7 @@ idle (void *idle_started_ UNUSED)
       thread_block ();
 
       /* Re-enable interrupts and wait for the next one.
-          
+
          The `sti' instruction disables interrupts until the
          completion of the next instruction, so these two
          instructions are executed atomically.  This atomicity is
@@ -455,7 +446,8 @@ is_thread (struct thread *t)
   return t != NULL && t->magic == THREAD_MAGIC;
 }
 
-
+/* Does basic initialization of T as a blocked thread named
+   NAME. */
 static void
 init_thread (struct thread *t, const char *name, int priority)
 {
@@ -495,15 +487,13 @@ alloc_frame (struct thread *t, size_t size)
    empty.  (If the running thread can continue running, then it
    will be in the run queue.)  If the run queue is empty, return
    idle_thread. */
-
-
 static struct thread *
 next_thread_to_run (void) 
 {
   if (list_empty (&ready_list))
     return idle_thread;
-  else 
-    return list_entry (list_pop_back (&ready_list), struct thread, elem);
+  else
+    return list_entry (list_pop_front (&ready_list), struct thread, elem);
 }
 
 /* Completes a thread switch by activating the new thread's page
@@ -537,7 +527,6 @@ thread_schedule_tail (struct thread *prev)
 
 #ifdef USERPROG
   /* Activate the new address space. */
-  
   process_activate ();
 #endif
 
@@ -589,8 +578,7 @@ allocate_tid (void)
 
   return tid;
 }
-
+
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
-
